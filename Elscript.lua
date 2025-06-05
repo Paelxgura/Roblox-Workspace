@@ -120,7 +120,7 @@ local function onHeartbeatRenderStep()
 
     for i, noteInfo in ipairs(currentLocalState.Notes) do
         local beatIndex = noteInfo[1]
-        local noteObject = noteInfo[2]
+        -- local noteObject = noteInfo[2] -- Tidak digunakan secara langsung di sini
 
         if not currentLocalState.Beats[beatIndex] then
             continue
@@ -145,7 +145,7 @@ local function onHeartbeatRenderStep()
     if bestNoteToHit then
         local noteData = bestNoteToHit.noteData
         local beatIndex = noteData[1]
-        local noteObject = noteData[2]
+        local noteObject = noteData[2] -- GUI object dari note
         local arrayIndex = bestNoteToHit.arrayIndex
         local timeError = bestNoteToHit.timeError
 
@@ -230,51 +230,40 @@ local computerESPEnabled = false
 local LocalPlayer = Players.LocalPlayer
 
 -- Buat ESP
-local function createESP(model, labelText, fillColor, progressText) -- Tambahkan argumen progressText
+-- POTONGAN SCRIPT SEBELUMNYA (Rayfield, Auto Heartbeat, dst...) --
+-- ... (tidak diubah) ...
+
+-- BUAT ESP
+local function createESP(model, labelText, fillColor, progressText)
     local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("RootPart") or model:FindFirstChild("Torso")
-    
-    -- Untuk komputer, root mungkin adalah model itu sendiri jika tidak ada part spesifik
+
     if model.Name:lower():match("computer") and not root then
-        -- Coba cari part acak di dalam model komputer sebagai adornee, atau gunakan pivot model jika bisa
-        -- Untuk kesederhanaan, kita bisa skip jika tidak ada root part yang jelas untuk komputer
-        -- Atau, kita bisa letakkan BillboardGui langsung di model, tapi adornee lebih baik.
-        -- Jika model komputer memiliki PrimaryPart, gunakan itu.
         if model.PrimaryPart then
             root = model.PrimaryPart
         else
-            -- Fallback jika tidak ada PrimaryPart, coba part pertama yang ditemukan
-            local firstPart = model:FindFirstChildWhichIsA("BasePart")
-            if firstPart then
-                root = firstPart
-            else
-                 -- warn("[ESP] Tidak dapat menemukan Root Part atau PrimaryPart untuk komputer:", model.Name)
-                -- return -- Jangan buat ESP jika tidak ada adornee yang valid
-            end
+            root = model:FindFirstChildWhichIsA("BasePart")
         end
     end
 
-    if not root and not model.Name:lower():match("computer") then -- Jika bukan komputer dan tidak ada root
-        return
-    end
+    if not root and not model.Name:lower():match("computer") then return end
 
     local espTag = model:FindFirstChild("ESPTag")
     local espHighlight = model:FindFirstChild("ESPHighlight")
 
     local displayText = "[" .. labelText .. "] " .. model.Name
     if progressText then
-        displayText = displayText .. "\n" .. progressText -- Tambahkan progress text jika ada
+        displayText = displayText .. "\n" .. progressText
     end
 
     if not espTag then
         local gui = Instance.new("BillboardGui")
         gui.Name = "ESPTag"
-        gui.Adornee = root or model -- Jika root masih nil (misal komputer tanpa part), adornee ke model
-        gui.Size = UDim2.new(0, 150, 0, 60) -- Perbesar sedikit untuk dua baris teks
+        gui.Adornee = root or model
+        gui.Size = UDim2.new(0, 150, 0, 60)
         gui.StudsOffset = Vector3.new(0, 3.5, 0)
         gui.AlwaysOnTop = true
-        gui.LightInfluence = 0 -- Agar tidak terpengaruh pencahayaan
-        gui.ResetOnSpawn = false -- Agar tidak hilang saat karakter respawn (jika adornee karakter)
-
+        gui.LightInfluence = 0
+        gui.ResetOnSpawn = false
 
         local text = Instance.new("TextLabel")
         text.Name = "ESPText"
@@ -283,20 +272,19 @@ local function createESP(model, labelText, fillColor, progressText) -- Tambahkan
         text.Text = displayText
         text.TextColor3 = fillColor
         text.TextStrokeTransparency = 0.3
-        text.TextScaled = false -- Matikan TextScaled agar ukuran font konsisten
+        text.TextScaled = false
         text.RichText = true
         text.Font = Enum.Font.GothamSemibold
-        text.TextSize = 14 -- Atur ukuran font
-        text.TextWrapped = true -- Aktifkan text wrapping
+        text.TextSize = 14
+        text.TextWrapped = true
         text.Parent = gui
         gui.Parent = model
         espTag = gui
     else
-        -- Update teks jika ESP tag sudah ada
         local textLabel = espTag:FindFirstChild("ESPText")
         if textLabel then
             textLabel.Text = displayText
-            textLabel.TextColor3 = fillColor -- Update warna juga jika berubah (misal status completed)
+            textLabel.TextColor3 = fillColor
         end
     end
 
@@ -305,25 +293,27 @@ local function createESP(model, labelText, fillColor, progressText) -- Tambahkan
         hl.Name = "ESPHighlight"
         hl.Adornee = model
         hl.FillColor = fillColor
-        hl.OutlineColor = Color3.fromRGB(fillColor.r * 255 * 0.7, fillColor.g * 255 * 0.7, fillColor.b * 255 * 0.7) -- Outline lebih gelap
+        hl.OutlineColor = Color3.fromRGB(fillColor.r * 255 * 0.7, fillColor.g * 255 * 0.7, fillColor.b * 255 * 0.7)
         hl.FillTransparency = 0.5
         hl.OutlineTransparency = 0.2
-        hl.DepthMode = Enum.HighlightDepthMode.Occluded -- Terlihat meski terhalang
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop -- ✅ ESP tembus objek
         hl.Parent = model
         espHighlight = hl
     else
         espHighlight.FillColor = fillColor
         espHighlight.OutlineColor = Color3.fromRGB(fillColor.r * 255 * 0.7, fillColor.g * 255 * 0.7, fillColor.b * 255 * 0.7)
+        espHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop -- ✅ Pastikan X-RAY tetap aktif
     end
 end
 
+
 -- Hapus ESP
 local function clearESP(model)
-    for _, child in ipairs(model:GetChildren()) do
-        if child.Name == "ESPTag" or child.Name == "ESPHighlight" then
-            child:Destroy()
-        end
-    end
+    local espTag = model:FindFirstChild("ESPTag")
+    if espTag then espTag:Destroy() end
+
+    local espHighlight = model:FindFirstChild("ESPHighlight")
+    if espHighlight then espHighlight:Destroy() end
 end
 
 -- Scan dan update ESP Player
@@ -348,37 +338,56 @@ end
 
 -- Scan dan update ESP Computer
 local function scanComputersESP()
-    if not computerESPEnabled then return end
+    if not computerESPEnabled then 
+        -- print("DEBUG ESP: Computer ESP dinonaktifkan.") -- Untuk debugging
+        return 
+    end
     
-    local tasksFolder = workspace:FindFirstChild("Tasks")
-    if not tasksFolder then return end
+    -- print("DEBUG ESP: Memulai scanComputersESP...") -- Untuk debugging
+    local tasksFolder = workspace:FindFirstChild("Tasks", true) 
+    if not tasksFolder then 
+        print("DEBUG ESP: Folder 'Tasks' tidak ditemukan di workspace (pencarian rekursif).") 
+        return 
+    end
+    -- print("DEBUG ESP: Folder 'Tasks' ditemukan di:", tasksFolder:GetFullName(), ". Scanning items...") -- Untuk debugging
 
-    for _, item in ipairs(tasksFolder:GetChildren()) do -- Hanya cari di dalam folder Tasks
+    local foundComputerThisScan = false
+    for _, item in ipairs(tasksFolder:GetChildren()) do 
         if item:IsA("Model") and item.Name:lower() == "computer" then
+            foundComputerThisScan = true
+            -- print("DEBUG ESP: Ditemukan model 'computer':", item:GetFullName()) -- Untuk debugging
             local progress = item:GetAttribute("Progress")
             local completed = item:GetAttribute("Completed")
+            -- print("DEBUG ESP: Atribut untuk", item.Name, "- Progress:", progress, "Completed:", completed) -- Untuk debugging
+            
             local progressText = ""
-            local espColor = Color3.fromRGB(50, 255, 50) -- Warna default untuk komputer (hijau)
+            local espColor = Color3.fromRGB(50, 255, 50) 
 
             if completed == true then
                 progressText = "Completed"
-                espColor = Color3.fromRGB(100, 150, 255) -- Warna biru jika sudah selesai
+                espColor = Color3.fromRGB(100, 150, 255) 
             elseif type(progress) == "number" then
-                progressText = string.format("Progress: %.1f", progress) -- Format progress menjadi satu angka desimal
-                if progress >= 100 then -- Asumsi progress 100 adalah selesai, bisa disesuaikan
-                     -- progressText = "Progress: MAX" -- Atau biarkan angka jika bisa lebih dari 100
-                end
+                progressText = string.format("Progress: %.1f", progress) 
             else
-                progressText = "Progress: N/A" -- Jika attribute tidak ada atau bukan angka
+                progressText = "Progress: N/A" 
             end
             createESP(item, "COMPUTER", espColor, progressText)
+        -- else -- Untuk debugging jika item di Tasks tidak sesuai kriteria
+            -- if item:IsA("Model") then
+                -- print("DEBUG ESP: Item di Tasks adalah Model tapi bukan 'computer':", item:GetFullName())
+            -- else
+                -- print("DEBUG ESP: Item di Tasks bukan Model:", item:GetFullName(), item.ClassName)
+            -- end
         end
+    end
+    if not foundComputerThisScan then
+        print("DEBUG ESP: Tidak ada model 'computer' yang ditemukan di folder 'Tasks' (".. tasksFolder:GetFullName() ..") pada scan ini.") 
     end
 end
 
 
 task.spawn(function()
-    while RunService.Stepped:Wait() do -- Ganti task.wait dengan loop yang lebih responsif
+    while RunService.Stepped:Wait() do 
         if espEnabled then
             pcall(scanPlayersESP)
         end
@@ -401,9 +410,7 @@ local AutoHeartbeatToggle = MainTab:CreateToggle({
         local success = enableAutoHeartbeat(Value)
         if not success and Value then 
             heartbeatAutoClickerActive = false
-            -- Jika Rayfield mendukung, update UI togglenya di sini
-            -- AutoHeartbeatToggle:SetValue(false) -- Contoh jika ada API nya
-            Rayfield:SetFlag("AutoHeartbeatEnabled", false) -- Coba set flag Rayfield
+            Rayfield:SetFlag("AutoHeartbeatEnabled", false) 
         end
     end
 })
@@ -433,7 +440,7 @@ MainTab:CreateToggle({
     Callback = function(Value)
         computerESPEnabled = Value
         if not Value then
-            local tasksFolder = workspace:FindFirstChild("Tasks")
+            local tasksFolder = workspace:FindFirstChild("Tasks", true) 
             if tasksFolder then
                 for _, item in ipairs(tasksFolder:GetChildren()) do
                      if item:IsA("Model") and item.Name:lower() == "computer" then
@@ -441,7 +448,6 @@ MainTab:CreateToggle({
                     end
                 end
             end
-            -- Hapus juga ESP komputer di luar folder Tasks jika ada, untuk kebersihan
             for _, item in ipairs(workspace:GetDescendants()) do
                 if item:IsA("Model") and item.Name:lower() == "computer" and item:FindFirstChild("ESPTag") then
                     clearESP(item)
