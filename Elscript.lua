@@ -329,7 +329,7 @@ local function scanPlayersESP()
 				if role == "Monster" then
 					createESP(char, "MONSTER", Color3.fromRGB(255, 50, 50))
 				elseif role == "Survivor" then
-					createESP(char, "SURVIVOR", Color3.fromRGB(50, 180, 255))
+					createESP(char, "SURVIVOR", Color3.fromRGB(255, 236, 161))
 				else 
 					createESP(char, "PLAYER", Color3.fromRGB(220, 220, 220))
 				end
