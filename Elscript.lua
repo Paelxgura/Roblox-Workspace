@@ -131,180 +131,107 @@ local function enableAutoHeartbeat(enable)
 end
 
 --==================================================--
---[[         ESP SYSTEM (OPTIMIZED & FIXED)       ]]--
+--[[      ESP SYSTEM (OPTIMIZED FROM ORIGINAL)    ]]--
 --==================================================--
 local espEnabled = false
 local computerESPEnabled = false
-local trackedObjects = {} -- Melacak Player atau Model (Komputer)
+local trackedModels = {} -- Melacak Model (Karakter atau Komputer) untuk efisiensi
 local ESP_UPDATE_INTERVAL = 0.25
 
--- Fungsi untuk membersihkan semua elemen ESP dari sebuah objek
-local function clearESP(object)
-	if not object or not trackedObjects[object] then return end
-	local espInfo = trackedObjects[object]
-	if espInfo.Tag and espInfo.Tag.Parent then espInfo.Tag:Destroy() end
-	if espInfo.Highlight and espInfo.Highlight.Parent then espInfo.Highlight:Destroy() end
-	trackedObjects[object] = nil
+-- Fungsi untuk membersihkan elemen ESP dari sebuah model
+local function clearESP(model)
+	if not model or not trackedModels[model] then return end
+	local espElements = trackedModels[model]
+	if espElements.Tag and espElements.Tag.Parent then espElements.Tag:Destroy() end
+	if espElements.Highlight and espElements.Highlight.Parent then espElements.Highlight:Destroy() end
+	trackedModels[model] = nil
 end
 
--- Fungsi utama untuk membuat/memperbarui ESP.
--- Sekarang lebih pintar dalam menangani Player vs Model.
--- Fungsi utama untuk membuat/memperbarui ESP.
--- Versi ini dengan pengaturan opacity yang bisa diubah.
-local function createOrUpdateESP(object, labelText, fillColor, progressText)
-	local model, root
-	
-	if object:IsA("Player") then
-		model = object.Character
-		if not model then
-			clearESP(object)
-			return
-		end
-		root = model:FindFirstChild("HumanoidRootPart")
-	elseif object:IsA("Model") then
-		model = object
-		root = model.PrimaryPart or model:FindFirstChild("RootPart") or model:FindFirstChildWhichIsA("BasePart")
-	end
+-- Fungsi yang dioptimalkan untuk membuat/memperbarui ESP pada sebuah MODEL
+-- Fungsi ini sekarang hanya menerima Model, membuatnya lebih sederhana dan andal
+local function createOrUpdateESP(model, labelText, fillColor, progressText)
+	if not model or not model:IsA("Model") then return end
 
-	if not model or not root then return end
-	
-	local espInfo = trackedObjects[object] or {}
-	
-	if espInfo.Character and espInfo.Character ~= model then
-		clearESP(object)
-		espInfo = {}
-	end
+	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
+	if not root then return end
 
+	local espInfo = trackedModels[model] or {}
 	local displayText = labelText
-	if progressText then
-		displayText = displayText .. "\n" .. progressText
-	end
+	if progressText then displayText = displayText .. "\n" .. progressText end
 	
-	-- Buat atau Update BillboardGui (Teks)
 	if not espInfo.Tag or not espInfo.Tag.Parent then
-		local gui = Instance.new("BillboardGui", model)
-		gui.Name = "ESPTag"
-		gui.Adornee = root
-		gui.Size = UDim2.new(0, 150, 0, 60)
-		gui.StudsOffset = Vector3.new(0, 5, 0)
-		gui.AlwaysOnTop = true
-		gui.LightInfluence = 0
-		gui.ResetOnSpawn = false
-		
-		local text = Instance.new("TextLabel", gui)
-		text.Name = "ESPText"
-		text.Size = UDim2.new(1, 0, 1, 0)
-		text.BackgroundTransparency = 1
-		text.TextColor3 = fillColor
-		text.Font = Enum.Font.GothamSemibold
-		text.TextSize = 14
-		text.TextWrapped = true
-		text.RichText = true
-		
-		-- [[ PENGATURAN OPACITY TEKS ]]
-		text.TextTransparency = 0.2 -- # <--- UBAH DI SINI (0.0 = solid, 1.0 = hilang)
-		text.TextStrokeTransparency = 0.5 -- # <--- UBAH DI SINI (garis pinggir teks)
-		
+		local gui = Instance.new("BillboardGui", model); gui.Name = "ESPTag"; gui.Adornee = root; gui.Size = UDim2.new(0, 150, 0, 60); gui.StudsOffset = Vector3.new(0, 5, 0); gui.AlwaysOnTop = true; gui.LightInfluence = 0; gui.ResetOnSpawn = false
+		local text = Instance.new("TextLabel", gui); text.Name = "ESPText"; text.Size = UDim2.new(1, 0, 1, 0); text.BackgroundTransparency = 1; text.TextColor3 = fillColor; text.Font = Enum.Font.GothamSemibold; text.TextSize = 14; text.TextWrapped = true; text.RichText = true
+		text.TextTransparency = 0.2; text.TextStrokeTransparency = 0.5
 		espInfo.Tag = gui
 	end
 	
-	espInfo.Tag.ESPText.Text = displayText
-	espInfo.Tag.ESPText.TextColor3 = fillColor
-	espInfo.Tag.Adornee = root
+	espInfo.Tag.ESPText.Text = displayText; espInfo.Tag.ESPText.TextColor3 = fillColor; espInfo.Tag.Adornee = root
 	
-	-- Buat atau Update Highlight (Siluet)
 	if not espInfo.Highlight or not espInfo.Highlight.Parent then
-		local hl = Instance.new("Highlight", model)
-		hl.Name = "ESPHighlight"
-		hl.Adornee = model
-		hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		local hl = Instance.new("Highlight", model); hl.Name = "ESPHighlight"; hl.Adornee = model; hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 		espInfo.Highlight = hl
 	end
 	
-	espInfo.Highlight.FillColor = fillColor
-	espInfo.Highlight.OutlineColor = Color3.new(fillColor.r * 0.7, fillColor.g * 0.7, fillColor.b * 0.7)
-
-	-- [[ PENGATURAN OPACITY HIGHLIGHT ]]
-	espInfo.Highlight.FillTransparency = 0.9 -- # <--- UBAH DI SINI (isian warna siluet)
-	espInfo.Highlight.OutlineTransparency = 0.7 -- # <--- UBAH DI SINI (garis pinggir siluet)
+	espInfo.Highlight.FillColor = fillColor; espInfo.Highlight.OutlineColor = Color3.new(fillColor.r * 0.7, fillColor.g * 0.7, fillColor.b * 0.7)
+	espInfo.Highlight.FillTransparency = 0.8; espInfo.Highlight.OutlineTransparency = 0.6
 	
-	trackedObjects[object] = espInfo
-	if object:IsA("Player") then
-		espInfo.Character = model
-	end
+	trackedModels[model] = espInfo
 end
 
--- Fungsi scan untuk komputer tidak perlu banyak berubah
+-- =================================================================== --
+-- == FUNGSI SCAN UTAMA - MENGGUNAKAN LOGIKA DARI SCRIPT AWAL ANDA == --
+-- =================================================================== --
+local function scanAllPlayers()
+    if not espEnabled then return end
+
+    -- Loop melalui semua pemain, sama seperti script awal Anda
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local char = player.Character
+            local role = player:GetAttribute("Role")
+
+            -- Menentukan warna berdasarkan role, sama seperti script awal
+            local color = Color3.fromRGB(220, 220, 220) -- Warna default
+            if role == "Monster" then
+                color = Color3.fromRGB(255, 50, 50)
+            elseif role == "Survivor" then
+                color = Color3.fromRGB(255, 236, 161)
+            end
+
+            -- Terapkan ESP ke MODEL KARAKTER dengan NAMA PLAYER dan WARNA yang sesuai
+            -- Ini adalah cara kerja script asli Anda, sekarang hanya dioptimalkan.
+            createOrUpdateESP(char, player.Name, color)
+        end
+    end
+end
+
+-- Fungsi scan untuk komputer tidak diubah
 local function scanComputersESP()
 	if not computerESPEnabled then return end
 	local tasksFolder = Workspace:FindFirstChild("Tasks", true)
 	if not tasksFolder then return end
-	
 	for _, item in ipairs(tasksFolder:GetChildren()) do 
 		if item:IsA("Model") and item.Name:lower() == "computer" then
-			local progress = item:GetAttribute("Progress")
-			local completed = item:GetAttribute("Completed")
-			local progressText, espColor
-			
-			if completed then
-				progressText = "Completed"; espColor = Color3.fromRGB(100, 150, 255)
-			elseif type(progress) == "number" then
-				progressText = string.format("Progress: %.1f", progress); espColor = Color3.fromRGB(50, 255, 50)
-			else
-				progressText = "Progress: N/A"; espColor = Color3.fromRGB(50, 255, 50)
-			end
+			local progress = item:GetAttribute("Progress"); local completed = item:GetAttribute("Completed"); local progressText, espColor
+			if completed then progressText = "Completed"; espColor = Color3.fromRGB(100, 150, 255) elseif type(progress) == "number" then progressText = string.format("Progress: %.1f", progress); espColor = Color3.fromRGB(50, 255, 50) else progressText = "Progress: N/A"; espColor = Color3.fromRGB(50, 255, 50) end
 			createOrUpdateESP(item, "COMPUTER", espColor, progressText)
 		end
 	end
 end
 
--- Fungsi update untuk player, sekarang hanya sebagai pembungkus
-local function updatePlayerESP(player)
-	if not espEnabled or player == LocalPlayer then return end
-	
-	local role = player:GetAttribute("Role")
-	local color, nameText
-	
-	-- Teks utama ESP sekarang SELALU nama pemain
-	nameText = player.Name
-	
-	-- Default warna jika role tidak terdeteksi
-	color = Color3.fromRGB(220, 220, 220)
-
-	-- [[ PERBAIKAN DI SINI ]]
-	-- Kita ubah nilai role menjadi huruf kecil semua sebelum dicek, agar lebih andal.
-	if type(role) == "string" and role ~= "" then
-		local roleLower = string.lower(role)
-		
-		if string.find(roleLower, "monster") then
-			-- Jika kata "monster" ditemukan, beri warna merah
-			color = Color3.fromRGB(255, 50, 50)
-		elseif string.find(roleLower, "survivor") then
-			-- Jika kata "survivor" ditemukan, beri warna kuning
-			color = Color3.fromRGB(255, 236, 161)
-		end
-	end
-	
-	-- Panggil fungsi utama hanya dengan nama pemain dan warna.
-	createOrUpdateESP(player, nameText, color)
-end
-
--- Main ESP Loop
+-- Loop utama ESP
 task.spawn(function()
 	while true do
-		-- Hapus objek yang sudah tidak valid dari daftar pelacakan
-		for object, _ in pairs(trackedObjects) do
-			if not object or not object.Parent then
-				clearESP(object)
+		-- Hapus ESP dari model yang sudah tidak ada
+		for model in pairs(trackedModels) do
+			if not model or not model.Parent then
+				clearESP(model)
 			end
 		end
 
 		if espEnabled then
-			for _, player in ipairs(Players:GetPlayers()) do
-				if player ~= LocalPlayer then
-					pcall(updatePlayerESP, player)
-				end
-			end
+			pcall(scanAllPlayers)
 		end
 		
 		if computerESPEnabled then
@@ -315,8 +242,12 @@ task.spawn(function()
 	end
 end)
 
--- Event untuk membersihkan ESP saat player keluar
-Players.PlayerRemoving:Connect(clearESP)
+-- Membersihkan ESP saat player keluar
+Players.PlayerRemoving:Connect(function(player)
+    if player.Character and trackedModels[player.Character] then
+        clearESP(player.Character)
+    end
+end)
 
 --==================================================--
 --[[            MOVEMENT (OPTIMIZED)              ]]--
