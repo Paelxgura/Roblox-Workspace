@@ -228,6 +228,7 @@ end
 local espEnabled = false
 local computerESPEnabled = false 
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 -- Buat ESP
 -- POTONGAN SCRIPT SEBELUMNYA (Rayfield, Auto Heartbeat, dst...) --
@@ -321,30 +322,59 @@ end
 -- Scan dan update ESP Player
 local function scanPlayersESP()
 	if not espEnabled then return end
+
+	local localCharacter = LocalPlayer.Character
+	-- Jika karakter lokal tidak ada, kita tidak bisa melakukan pengecekan, jadi keluar
+	if not localCharacter then return end
+
+	local cameraPosition = Camera.CFrame.Position
+	-- Siapkan parameter raycast: hanya akan mendeteksi tabrakan dengan karakter lokal
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterType = Enum.RaycastFilterType.Whitelist
+	raycastParams.FilterDescendantsInstances = {localCharacter}
+
 	for _, player in ipairs(Players:GetPlayers()) do
 		local char = player.Character
-		-- Lewati iterasi jika karakter pemain tidak ada
-		if not (char and char:IsA("Model")) then continue end
-
 		if player == LocalPlayer then
-			-- INI ADALAH PEMAIN LOKAL (ANDA) --
-			-- Pastikan tidak ada ESP pada karakter sendiri.
-			-- Jika ada elemen ESP yang tertinggal, bersihkan.
-			if char:FindFirstChild("ESPTag") or char:FindFirstChild("ESPHighlight") then
+			-- Pastikan karakter lokal selalu bersih dari ESP
+			if char and (char:FindFirstChild("ESPTag") or char:FindFirstChild("ESPHighlight")) then
 				clearESP(char)
 			end
-		else
-			-- INI ADALAH PEMAIN LAIN --
-			-- Terapkan ESP seperti biasa.
-			local role = player:GetAttribute("Role")
-			if role == "Monster" then
-				createESP(char, "MONSTER", Color3.fromRGB(255, 50, 50))
-			elseif role == "Survivor" then
-				createESP(char, "SURVIVOR", Color3.fromRGB(255, 236, 161))
-			else 
-				createESP(char, "PLAYER", Color3.fromRGB(220, 220, 220))
-			end
+			continue -- Lanjut ke pemain berikutnya
 		end
+
+		-- Proses untuk pemain lain
+		local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+		if not rootPart then continue end
+
+		-- Langkah 1: Pastikan ESP dibuat (tetap AlwaysOnTop)
+		-- Pastikan fungsi createESP Anda masih menggunakan AlwaysOnTop = true dan DepthMode = AlwaysOnTop
+		local role = player:GetAttribute("Role")
+		if role == "Monster" then
+			createESP(char, "MONSTER", Color3.fromRGB(255, 50, 50))
+		elseif role == "Survivor" then
+			createESP(char, "SURVIVOR", Color3.fromRGB(255, 236, 161))
+		else
+			createESP(char, "PLAYER", Color3.fromRGB(220, 220, 220))
+		end
+
+		local espTag = char:FindFirstChild("ESPTag")
+		local espHighlight = char:FindFirstChild("ESPHighlight")
+		if not (espTag and espHighlight) then continue end
+		
+		-- Langkah 2: Lakukan pengecekan Raycast
+		local targetPosition = rootPart.Position
+		local direction = targetPosition - cameraPosition
+		local distanceToTarget = direction.Magnitude
+		
+		local result = workspace:Raycast(cameraPosition, direction.Unit * distanceToTarget, raycastParams)
+
+		-- Jika result ada, berarti sinar mengenai karakter lokal sebelum mencapai target
+		local isOccludedByLocalPlayer = result ~= nil
+
+		-- Langkah 3: Atur visibilitas ESP berdasarkan hasil raycast
+		espTag.Enabled = not isOccludedByLocalPlayer
+		espHighlight.Enabled = not isOccludedByLocalPlayer
 	end
 end
 
