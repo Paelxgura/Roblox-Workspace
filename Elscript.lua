@@ -321,64 +321,19 @@ end
 -- Scan dan update ESP Player
 local function scanPlayersESP()
 	if not espEnabled then return end
-
-	local localCharacter = LocalPlayer.Character
-	if not localCharacter then return end
-
-	local cameraPosition = Camera.CFrame.Position
-	local raycastParams = RaycastParams.new()
-	raycastParams.FilterType = Enum.RaycastFilterType.Whitelist
-	raycastParams.FilterDescendantsInstances = {localCharacter}
-
 	for _, player in ipairs(Players:GetPlayers()) do
-		local char = player.Character
-		if player == LocalPlayer then
-			if char and (char:FindFirstChild("ESPTag") or char:FindFirstChild("ESPHighlight")) then
-				clearESP(char)
+		if player ~= LocalPlayer then
+			local role = player:GetAttribute("Role")
+			local char = player.Character
+			if char and char:IsA("Model") then
+				if role == "Monster" then
+					createESP(char, "MONSTER", Color3.fromRGB(255, 50, 50))
+				elseif role == "Survivor" then
+					createESP(char, "SURVIVOR", Color3.fromRGB(255, 236, 161))
+				else 
+					createESP(char, "PLAYER", Color3.fromRGB(220, 220, 220))
+				end
 			end
-			continue
-		end
-
-		local rootPart = char and char:FindFirstChild("HumanoidRootPart")
-		if not rootPart then continue end
-
-		-- Pastikan ESP dibuat (menggunakan createESP versi asli)
-		local role = player:GetAttribute("Role")
-		if role == "Monster" then
-			createESP(char, "MONSTER", Color3.fromRGB(255, 50, 50))
-		elseif role == "Survivor" then
-			createESP(char, "SURVIVOR", Color3.fromRGB(255, 236, 161))
-		else
-			createESP(char, "PLAYER", Color3.fromRGB(220, 220, 220))
-		end
-
-		local espTag = char:FindFirstChild("ESPTag")
-		local espHighlight = char:FindFirstChild("ESPHighlight")
-		local espText = espTag and espTag:FindFirstChild("ESPText")
-		if not (espTag and espHighlight and espText) then continue end
-		
-		-- Lakukan pengecekan Raycast
-		local targetPosition = rootPart.Position
-		local direction = targetPosition - cameraPosition
-		
-		local result = workspace:Raycast(cameraPosition, direction, raycastParams)
-
-		-- Jika result ada, berarti karakter Anda menghalangi pandangan
-		local isOccludedByLocalPlayer = result ~= nil
-
-		-- Terapkan efek transparansi jika terhalang
-		if isOccludedByLocalPlayer then
-			-- BUAT ESP MENJADI PUDAR
-			espHighlight.FillTransparency = 0.9
-			espHighlight.OutlineTransparency = 0.95
-			espText.TextTransparency = 0.8
-			espText.TextStrokeTransparency = 0.9
-		else
-			-- KEMBALIKAN KE KONDISI NORMAL
-			espHighlight.FillTransparency = 0.5
-			espHighlight.OutlineTransparency = 0.2
-			espText.TextTransparency = 0
-			espText.TextStrokeTransparency = 0.3
 		end
 	end
 end
