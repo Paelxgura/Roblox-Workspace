@@ -225,8 +225,8 @@ local function createOrUpdateESP(object, labelText, fillColor, progressText)
 	espInfo.Highlight.OutlineColor = Color3.new(fillColor.r * 0.7, fillColor.g * 0.7, fillColor.b * 0.7)
 
 	-- [[ PENGATURAN OPACITY HIGHLIGHT ]]
-	espInfo.Highlight.FillTransparency = 0.3 -- # <--- UBAH DI SINI (isian warna siluet)
-	espInfo.Highlight.OutlineTransparency = 0.5 -- # <--- UBAH DI SINI (garis pinggir siluet)
+	espInfo.Highlight.FillTransparency = 0.9 -- # <--- UBAH DI SINI (isian warna siluet)
+	espInfo.Highlight.OutlineTransparency = 0.7 -- # <--- UBAH DI SINI (garis pinggir siluet)
 	
 	trackedObjects[object] = espInfo
 	if object:IsA("Player") then
@@ -265,18 +265,27 @@ local function updatePlayerESP(player)
 	local role = player:GetAttribute("Role")
 	local color, nameText
 	
-
+	-- Teks utama ESP sekarang SELALU nama pemain
 	nameText = player.Name
 	
-	-- Tentukan WARNA berdasarkan role
-	if role == "Monster" then
-		color = Color3.fromRGB(255, 50, 50) -- Merah untuk Monster
-	elseif role == "Survivor" then
-		color = Color3.fromRGB(255, 236, 161) -- Kuning untuk Survivor
-	else 
-		color = Color3.fromRGB(220, 220, 220) -- Warna default
-	end
+	-- Default warna jika role tidak terdeteksi
+	color = Color3.fromRGB(220, 220, 220)
 
+	-- [[ PERBAIKAN DI SINI ]]
+	-- Kita ubah nilai role menjadi huruf kecil semua sebelum dicek, agar lebih andal.
+	if type(role) == "string" and role ~= "" then
+		local roleLower = string.lower(role)
+		
+		if string.find(roleLower, "monster") then
+			-- Jika kata "monster" ditemukan, beri warna merah
+			color = Color3.fromRGB(255, 50, 50)
+		elseif string.find(roleLower, "survivor") then
+			-- Jika kata "survivor" ditemukan, beri warna kuning
+			color = Color3.fromRGB(255, 236, 161)
+		end
+	end
+	
+	-- Panggil fungsi utama hanya dengan nama pemain dan warna.
 	createOrUpdateESP(player, nameText, color)
 end
 
