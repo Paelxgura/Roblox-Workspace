@@ -322,17 +322,27 @@ end
 local function scanPlayersESP()
 	if not espEnabled then return end
 	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer then
+		local char = player.Character
+		-- Lewati iterasi jika karakter pemain tidak ada
+		if not (char and char:IsA("Model")) then continue end
+
+		if player == LocalPlayer then
+			-- INI ADALAH PEMAIN LOKAL (ANDA) --
+			-- Pastikan tidak ada ESP pada karakter sendiri.
+			-- Jika ada elemen ESP yang tertinggal, bersihkan.
+			if char:FindFirstChild("ESPTag") or char:FindFirstChild("ESPHighlight") then
+				clearESP(char)
+			end
+		else
+			-- INI ADALAH PEMAIN LAIN --
+			-- Terapkan ESP seperti biasa.
 			local role = player:GetAttribute("Role")
-			local char = player.Character
-			if char and char:IsA("Model") then
-				if role == "Monster" then
-					createESP(char, "MONSTER", Color3.fromRGB(255, 50, 50))
-				elseif role == "Survivor" then
-					createESP(char, "SURVIVOR", Color3.fromRGB(255, 236, 161))
-				else 
-					createESP(char, "PLAYER", Color3.fromRGB(220, 220, 220))
-				end
+			if role == "Monster" then
+				createESP(char, "MONSTER", Color3.fromRGB(255, 50, 50))
+			elseif role == "Survivor" then
+				createESP(char, "SURVIVOR", Color3.fromRGB(255, 236, 161))
+			else 
+				createESP(char, "PLAYER", Color3.fromRGB(220, 220, 220))
 			end
 		end
 	end
