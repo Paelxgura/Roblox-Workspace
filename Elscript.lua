@@ -149,14 +149,15 @@ end
 
 -- Fungsi utama untuk membuat/memperbarui ESP.
 -- Sekarang lebih pintar dalam menangani Player vs Model.
+-- Fungsi utama untuk membuat/memperbarui ESP.
+-- Versi ini dengan pengaturan opacity yang bisa diubah.
 local function createOrUpdateESP(object, labelText, fillColor, progressText)
 	local model, root
 	
-	-- Tentukan model dan root part berdasarkan tipe objek (Player atau Model)
 	if object:IsA("Player") then
 		model = object.Character
 		if not model then
-			clearESP(object) -- Hapus ESP jika karakter tidak ada
+			clearESP(object)
 			return
 		end
 		root = model:FindFirstChild("HumanoidRootPart")
@@ -167,13 +168,11 @@ local function createOrUpdateESP(object, labelText, fillColor, progressText)
 
 	if not model or not root then return end
 	
-	-- Dapatkan info ESP yang sudah ada atau buat baru
 	local espInfo = trackedObjects[object] or {}
 	
-	-- Jika pemain respawn (model karakternya baru), hapus ESP lama
 	if espInfo.Character and espInfo.Character ~= model then
 		clearESP(object)
-		espInfo = {} -- Reset info
+		espInfo = {}
 	end
 
 	local displayText = labelText
@@ -181,7 +180,7 @@ local function createOrUpdateESP(object, labelText, fillColor, progressText)
 		displayText = displayText .. "\n" .. progressText
 	end
 	
-	-- Buat atau Update BillboardGui
+	-- Buat atau Update BillboardGui (Teks)
 	if not espInfo.Tag or not espInfo.Tag.Parent then
 		local gui = Instance.new("BillboardGui", model)
 		gui.Name = "ESPTag"
@@ -197,20 +196,23 @@ local function createOrUpdateESP(object, labelText, fillColor, progressText)
 		text.Size = UDim2.new(1, 0, 1, 0)
 		text.BackgroundTransparency = 1
 		text.TextColor3 = fillColor
-		text.TextStrokeTransparency = 0.3
 		text.Font = Enum.Font.GothamSemibold
 		text.TextSize = 14
 		text.TextWrapped = true
 		text.RichText = true
+		
+		-- [[ PENGATURAN OPACITY TEKS ]]
+		text.TextTransparency = 0.2 -- # <--- UBAH DI SINI (0.0 = solid, 1.0 = hilang)
+		text.TextStrokeTransparency = 0.5 -- # <--- UBAH DI SINI (garis pinggir teks)
 		
 		espInfo.Tag = gui
 	end
 	
 	espInfo.Tag.ESPText.Text = displayText
 	espInfo.Tag.ESPText.TextColor3 = fillColor
-	espInfo.Tag.Adornee = root -- Pastikan adornee selalu benar
+	espInfo.Tag.Adornee = root
 	
-	-- Buat atau Update Highlight
+	-- Buat atau Update Highlight (Siluet)
 	if not espInfo.Highlight or not espInfo.Highlight.Parent then
 		local hl = Instance.new("Highlight", model)
 		hl.Name = "ESPHighlight"
@@ -221,10 +223,11 @@ local function createOrUpdateESP(object, labelText, fillColor, progressText)
 	
 	espInfo.Highlight.FillColor = fillColor
 	espInfo.Highlight.OutlineColor = Color3.new(fillColor.r * 0.7, fillColor.g * 0.7, fillColor.b * 0.7)
-	espInfo.Highlight.FillTransparency = 0.5
-	espInfo.Highlight.OutlineTransparency = 0.2
+
+	-- [[ PENGATURAN OPACITY HIGHLIGHT ]]
+	espInfo.Highlight.FillTransparency = 0.3 -- # <--- UBAH DI SINI (isian warna siluet)
+	espInfo.Highlight.OutlineTransparency = 0.5 -- # <--- UBAH DI SINI (garis pinggir siluet)
 	
-	-- Simpan referensi objek dan karakter saat ini
 	trackedObjects[object] = espInfo
 	if object:IsA("Player") then
 		espInfo.Character = model
@@ -260,18 +263,21 @@ local function updatePlayerESP(player)
 	if not espEnabled or player == LocalPlayer then return end
 	
 	local role = player:GetAttribute("Role")
-	local color, roleText
+	local color, nameText
 	
+
+	nameText = player.Name
+	
+	-- Tentukan WARNA berdasarkan role
 	if role == "Monster" then
-		color = Color3.fromRGB(255, 50, 50); roleText = "MONSTER"
+		color = Color3.fromRGB(255, 50, 50) -- Merah untuk Monster
 	elseif role == "Survivor" then
-		color = Color3.fromRGB(255, 236, 161); roleText = "SURVIVOR"
+		color = Color3.fromRGB(255, 236, 161) -- Kuning untuk Survivor
 	else 
-		color = Color3.fromRGB(220, 220, 220); roleText = player.Name
+		color = Color3.fromRGB(220, 220, 220) -- Warna default
 	end
-	
-	-- Panggil fungsi utama dengan objek Player
-	createOrUpdateESP(player, roleText, color)
+
+	createOrUpdateESP(player, nameText, color)
 end
 
 -- Main ESP Loop
