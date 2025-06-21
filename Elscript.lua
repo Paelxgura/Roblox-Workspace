@@ -228,7 +228,6 @@ end
 local espEnabled = false
 local computerESPEnabled = false 
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 
 -- Buat ESP
 -- POTONGAN SCRIPT SEBELUMNYA (Rayfield, Auto Heartbeat, dst...) --
@@ -324,11 +323,9 @@ local function scanPlayersESP()
 	if not espEnabled then return end
 
 	local localCharacter = LocalPlayer.Character
-	-- Jika karakter lokal tidak ada, kita tidak bisa melakukan pengecekan, jadi keluar
 	if not localCharacter then return end
 
 	local cameraPosition = Camera.CFrame.Position
-	-- Siapkan parameter raycast: hanya akan mendeteksi tabrakan dengan karakter lokal
 	local raycastParams = RaycastParams.new()
 	raycastParams.FilterType = Enum.RaycastFilterType.Whitelist
 	raycastParams.FilterDescendantsInstances = {localCharacter}
@@ -336,19 +333,16 @@ local function scanPlayersESP()
 	for _, player in ipairs(Players:GetPlayers()) do
 		local char = player.Character
 		if player == LocalPlayer then
-			-- Pastikan karakter lokal selalu bersih dari ESP
 			if char and (char:FindFirstChild("ESPTag") or char:FindFirstChild("ESPHighlight")) then
 				clearESP(char)
 			end
-			continue -- Lanjut ke pemain berikutnya
+			continue
 		end
 
-		-- Proses untuk pemain lain
 		local rootPart = char and char:FindFirstChild("HumanoidRootPart")
 		if not rootPart then continue end
 
-		-- Langkah 1: Pastikan ESP dibuat (tetap AlwaysOnTop)
-		-- Pastikan fungsi createESP Anda masih menggunakan AlwaysOnTop = true dan DepthMode = AlwaysOnTop
+		-- Pastikan ESP dibuat (menggunakan createESP versi asli)
 		local role = player:GetAttribute("Role")
 		if role == "Monster" then
 			createESP(char, "MONSTER", Color3.fromRGB(255, 50, 50))
@@ -360,21 +354,32 @@ local function scanPlayersESP()
 
 		local espTag = char:FindFirstChild("ESPTag")
 		local espHighlight = char:FindFirstChild("ESPHighlight")
-		if not (espTag and espHighlight) then continue end
+		local espText = espTag and espTag:FindFirstChild("ESPText")
+		if not (espTag and espHighlight and espText) then continue end
 		
-		-- Langkah 2: Lakukan pengecekan Raycast
+		-- Lakukan pengecekan Raycast
 		local targetPosition = rootPart.Position
 		local direction = targetPosition - cameraPosition
-		local distanceToTarget = direction.Magnitude
 		
-		local result = workspace:Raycast(cameraPosition, direction.Unit * distanceToTarget, raycastParams)
+		local result = workspace:Raycast(cameraPosition, direction, raycastParams)
 
-		-- Jika result ada, berarti sinar mengenai karakter lokal sebelum mencapai target
+		-- Jika result ada, berarti karakter Anda menghalangi pandangan
 		local isOccludedByLocalPlayer = result ~= nil
 
-		-- Langkah 3: Atur visibilitas ESP berdasarkan hasil raycast
-		espTag.Enabled = not isOccludedByLocalPlayer
-		espHighlight.Enabled = not isOccludedByLocalPlayer
+		-- Terapkan efek transparansi jika terhalang
+		if isOccludedByLocalPlayer then
+			-- BUAT ESP MENJADI PUDAR
+			espHighlight.FillTransparency = 0.9
+			espHighlight.OutlineTransparency = 0.95
+			espText.TextTransparency = 0.8
+			espText.TextStrokeTransparency = 0.9
+		else
+			-- KEMBALIKAN KE KONDISI NORMAL
+			espHighlight.FillTransparency = 0.5
+			espHighlight.OutlineTransparency = 0.2
+			espText.TextTransparency = 0
+			espText.TextStrokeTransparency = 0.3
+		end
 	end
 end
 
